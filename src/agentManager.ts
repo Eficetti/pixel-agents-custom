@@ -18,6 +18,7 @@ import {
 import { migrateAndLoadLayout } from './layoutPersistence.js';
 import { cancelPermissionTimer, cancelWaitingTimer } from './timerManager.js';
 import type { AgentState, PersistedAgent } from './types.js';
+import { wrapTerminal } from './vscodeTerminalAdapter.js';
 
 export function getProjectDirPath(cwd?: string): string {
   // Fall back to home directory when no workspace folder is open.
@@ -108,7 +109,7 @@ export async function launchNewTerminal(
   const agent: AgentState = {
     id,
     sessionId,
-    terminalRef: terminal,
+    processRef: wrapTerminal(terminal),
     isExternal: false,
     projectDir,
     jsonlFile: expectedFile,
@@ -289,7 +290,7 @@ export function persistAgents(
     persisted.push({
       id: agent.id,
       sessionId: agent.sessionId,
-      terminalName: agent.terminalRef?.name ?? '',
+      terminalName: agent.processRef?.name ?? '',
       isExternal: agent.isExternal || undefined,
       jsonlFile: agent.jsonlFile,
       projectDir: agent.projectDir,
@@ -355,7 +356,7 @@ export function restoreAgents(
     const agent: AgentState = {
       id: p.id,
       sessionId: p.sessionId || path.basename(p.jsonlFile, '.jsonl'),
-      terminalRef: terminal,
+      processRef: wrapTerminal(terminal),
       isExternal,
       projectDir: p.projectDir,
       jsonlFile: p.jsonlFile,
@@ -457,7 +458,7 @@ export function restoreAgents(
   // These are dead terminals restored by VS Code (e.g., after /clear or restart)
   // where Claude is no longer running.
   const restoredTerminalIds = [...agents.entries()]
-    .filter(([, a]) => !a.isExternal && a.terminalRef)
+    .filter(([, a]) => !a.isExternal && a.processRef)
     .map(([id]) => id);
   if (restoredTerminalIds.length > 0) {
     setTimeout(() => {
@@ -467,7 +468,7 @@ export function restoreAgents(
           console.log(
             `[Pixel Agents] Terminal: Agent ${id} - removing restored agent, no data received`,
           );
-          agent.terminalRef?.dispose();
+          agent.processRef?.kill();
           removeAgent(
             id,
             agents,

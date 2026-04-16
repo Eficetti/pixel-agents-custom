@@ -42,6 +42,7 @@ import { TERMINAL_NAME_PREFIX } from './constants.js';
 import { cancelPermissionTimer, cancelWaitingTimer, clearAgentActivity } from './timerManager.js';
 import { processTranscriptLine } from './transcriptParser.js';
 import type { AgentState } from './types.js';
+import { unwrapTerminal, wrapTerminal } from './vscodeTerminalAdapter.js';
 
 /** Files explicitly dismissed by the user (closed via X). Temporarily blocked from re-adoption. */
 export const dismissedJsonlFiles = new Map<string, number>(); // path → dismissal timestamp
@@ -99,7 +100,7 @@ export function startFileWatching(
       !agent.hookDelivered &&
       clearDetectionDeps &&
       agent.fileOffset === prevOffset &&
-      agent.terminalRef &&
+      agent.processRef &&
       !agent.isExternal &&
       ![...agents.values()].some((a) => a.isExternal) &&
       agent.linesProcessed > 0 &&
@@ -375,7 +376,7 @@ function scanForNewJsonlFiles(
     if (activeTerminal && activeTerminal.name.startsWith(TERMINAL_NAME_PREFIX)) {
       let owned = false;
       for (const agent of agents.values()) {
-        if (agent.terminalRef === activeTerminal) {
+        if (unwrapTerminal(agent.processRef) === activeTerminal) {
           owned = true;
           break;
         }
@@ -404,7 +405,7 @@ function scanForNewJsonlFiles(
           if (!terminal.name.startsWith(TERMINAL_NAME_PREFIX)) continue;
           let owned = false;
           for (const agent of agents.values()) {
-            if (agent.terminalRef === terminal) {
+            if (unwrapTerminal(agent.processRef) === terminal) {
               owned = true;
               break;
             }
@@ -436,7 +437,7 @@ function scanForNewJsonlFiles(
   // Clean up orphaned agents whose terminals have been closed (skip external agents)
   for (const [id, agent] of agents) {
     if (agent.isExternal) continue;
-    if (agent.terminalRef && agent.terminalRef.exitStatus !== undefined) {
+    if (agent.processRef?.exited) {
       console.log(`[Pixel Agents] Watcher: Agent ${id} - terminal closed, cleaning up orphan`);
       // Stop file watching
       fileWatchers.get(id)?.close();
@@ -483,7 +484,7 @@ function adoptTerminalForFile(
   const agent: AgentState = {
     id,
     sessionId,
-    terminalRef: terminal,
+    processRef: wrapTerminal(terminal),
     isExternal: false,
     projectDir,
     jsonlFile,
@@ -664,7 +665,7 @@ export function scanForTeammateFiles(
     const agent: AgentState = {
       id,
       sessionId,
-      terminalRef: undefined,
+      processRef: undefined,
       isExternal: true,
       projectDir,
       jsonlFile: file,
@@ -879,7 +880,7 @@ export function adoptExternalSessionFromHook(
     const agent: AgentState = {
       id,
       sessionId,
-      terminalRef: undefined,
+      processRef: undefined,
       isExternal: true,
       projectDir: cwd,
       jsonlFile: '',
@@ -940,7 +941,7 @@ function adoptExternalSession(
   const agent: AgentState = {
     id,
     sessionId: path.basename(jsonlFile, '.jsonl'),
-    terminalRef: undefined,
+    processRef: undefined,
     isExternal: true,
     projectDir,
     jsonlFile,

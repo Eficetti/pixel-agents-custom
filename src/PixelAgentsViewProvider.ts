@@ -64,6 +64,7 @@ import type { LayoutWatcher } from './layoutPersistence.js';
 import { readLayoutFromFile, watchLayoutFile, writeLayoutToFile } from './layoutPersistence.js';
 import { setHookProvider } from './transcriptParser.js';
 import type { AgentState } from './types.js';
+import { unwrapTerminal } from './vscodeTerminalAdapter.js';
 
 export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
   nextAgentId = { current: 1 };
@@ -362,21 +363,21 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
       } else if (message.type === 'focusAgent') {
         const agent = this.agents.get(message.id);
         if (agent) {
-          if (agent.terminalRef) {
-            agent.terminalRef.show();
+          if (agent.processRef) {
+            agent.processRef.show();
           } else if (agent.leadAgentId !== undefined) {
             // Teammate (tmux): focus the lead's terminal instead
             const lead = this.agents.get(agent.leadAgentId);
-            if (lead?.terminalRef) {
-              lead.terminalRef.show();
+            if (lead?.processRef) {
+              lead.processRef.show();
             }
           }
         }
       } else if (message.type === 'closeAgent') {
         const agent = this.agents.get(message.id);
         if (agent) {
-          if (agent.terminalRef) {
-            agent.terminalRef.dispose();
+          if (agent.processRef) {
+            agent.processRef.kill();
           } else {
             // External agent — remove from tracking and dismiss the file
             // so the external scanner doesn't re-adopt it
@@ -795,7 +796,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
       this.activeAgentId.current = null;
       if (!terminal) return;
       for (const [id, agent] of this.agents) {
-        if (agent.terminalRef && agent.terminalRef === terminal) {
+        if (agent.processRef && unwrapTerminal(agent.processRef) === terminal) {
           this.activeAgentId.current = id;
           webviewView.webview.postMessage({ type: 'agentSelected', id });
           break;
@@ -805,7 +806,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 
     vscode.window.onDidCloseTerminal((closed) => {
       for (const [id, agent] of this.agents) {
-        if (agent.terminalRef && agent.terminalRef === closed) {
+        if (agent.processRef && unwrapTerminal(agent.processRef) === closed) {
           if (this.activeAgentId.current === id) {
             this.activeAgentId.current = null;
           }
