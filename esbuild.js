@@ -4,6 +4,7 @@ const path = require('path');
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
+const cliOnly = process.argv.includes('--cli');
 
 /**
  * Copy assets folder to dist/assets
@@ -54,6 +55,54 @@ function buildHooks() {
 }
 
 /**
+ * Bundle the CLI entry point (cli/src/index.ts) into cli/dist/index.js,
+ * then copy the built webview + assets alongside so the host can serve them.
+ * electron is marked external — Optional peer, not required at build time.
+ */
+function buildCli() {
+  const entry = path.join(__dirname, 'cli', 'src', 'index.ts');
+  if (!fs.existsSync(entry)) return;
+  const cliDistDir = path.join(__dirname, 'cli', 'dist');
+  require('esbuild').buildSync({
+    entryPoints: [entry],
+    bundle: true,
+    platform: 'node',
+    target: 'node20',
+    format: 'esm',
+    outfile: path.join(cliDistDir, 'index.js'),
+    // Node built-ins + npm deps (ws, electron) stay external. CJS inside ESM
+    // bundles breaks `require('events')` from ws; keeping packages external
+    // also shrinks the bundle and respects cli/node_modules at runtime.
+    packages: 'external',
+    external: ['electron'],
+    // Shebang lives in cli/src/index.ts; esbuild preserves it — no banner needed.
+    minify: production,
+    sourcemap: !production,
+  });
+  console.log('✓ Built cli/ → cli/dist/index.js');
+
+  // Copy built webview (from webview-ui's vite output) into cli/dist/webview/
+  const webviewSrc = path.join(__dirname, 'dist', 'webview');
+  const webviewDst = path.join(cliDistDir, 'webview');
+  if (fs.existsSync(webviewSrc)) {
+    if (fs.existsSync(webviewDst)) fs.rmSync(webviewDst, { recursive: true });
+    fs.cpSync(webviewSrc, webviewDst, { recursive: true });
+    console.log('✓ Copied dist/webview/ → cli/dist/webview/');
+  } else {
+    console.warn('⚠️  dist/webview/ not found — run `npm run build:webview` first.');
+  }
+
+  // Copy asset bundle into cli/dist/assets/
+  const assetsSrc = path.join(__dirname, 'webview-ui', 'public', 'assets');
+  const assetsDst = path.join(cliDistDir, 'assets');
+  if (fs.existsSync(assetsSrc)) {
+    if (fs.existsSync(assetsDst)) fs.rmSync(assetsDst, { recursive: true });
+    fs.cpSync(assetsSrc, assetsDst, { recursive: true });
+    console.log('✓ Copied assets/ → cli/dist/assets/');
+  }
+}
+
+/**
  * @type {import('esbuild').Plugin}
  */
 const esbuildProblemMatcherPlugin = {
@@ -74,6 +123,11 @@ const esbuildProblemMatcherPlugin = {
 };
 
 async function main() {
+  if (cliOnly) {
+    // CLI-only build path: skip the extension bundle entirely.
+    buildCli();
+    return;
+  }
   const ctx = await esbuild.context({
     entryPoints: ['src/extension.ts'],
     bundle: true,
