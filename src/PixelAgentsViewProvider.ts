@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
+import { Orchestrator } from '../core/src/orchestrator.js';
 import type { HookEvent } from '../server/src/hookEventHandler.js';
 import { HookEventHandler } from '../server/src/hookEventHandler.js';
 import {
@@ -47,6 +48,7 @@ import {
   LAYOUT_REVISION_KEY,
   WORKSPACE_KEY_AGENT_SEATS,
 } from './constants.js';
+import { TERMINAL_NAME_PREFIX } from './constants.js';
 import {
   adoptExternalSessionFromHook,
   dismissedJsonlFiles,
@@ -64,7 +66,10 @@ import type { LayoutWatcher } from './layoutPersistence.js';
 import { readLayoutFromFile, watchLayoutFile, writeLayoutToFile } from './layoutPersistence.js';
 import { setHookProvider } from './transcriptParser.js';
 import type { AgentState } from './types.js';
+import { VsCodeProcessProvider } from './vsCodeProcessProvider.js';
+import { VsCodeStateStore } from './vsCodeStateStore.js';
 import { unwrapTerminal } from './vscodeTerminalAdapter.js';
+import { VsCodeWorkspaceProvider } from './vsCodeWorkspaceProvider.js';
 
 export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
   nextAgentId = { current: 1 };
@@ -108,7 +113,45 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
   // ServerConfig is not stored as a field; use this.pixelAgentsServer?.getConfig() if needed.
   private hookEventHandler: HookEventHandler | null = null;
 
+  // Core orchestrator — single source of truth for agent state. The field
+  // declarations above initialize fresh collections; the constructor below
+  // replaces them with references to the orchestrator's maps so that both
+  // this ViewProvider and any core code share the same state.
+  readonly orchestrator: Orchestrator;
+
   constructor(private readonly context: vscode.ExtensionContext) {
+    this.orchestrator = new Orchestrator({
+      processProvider: new VsCodeProcessProvider(),
+      workspaceProvider: new VsCodeWorkspaceProvider(),
+      globalState: new VsCodeStateStore(context.globalState),
+      workspaceState: new VsCodeStateStore(context.workspaceState),
+      dialogProvider: {
+        showSaveDialog: async () => undefined,
+        showOpenDialog: async () => undefined,
+        showDirectoryDialog: async () => undefined,
+        showWarning: (msg) => vscode.window.showWarningMessage(msg),
+        showInfo: (msg) => vscode.window.showInformationMessage(msg),
+        showError: (msg) => vscode.window.showErrorMessage(msg),
+      },
+      assetsRoot: context.extensionPath,
+      processNamePrefix: TERMINAL_NAME_PREFIX,
+      command: 'claude',
+      buildArgs: (sessionId) => ['--session-id', sessionId],
+    });
+
+    // Share state with orchestrator — single source of truth.
+    this.agents = this.orchestrator.agents;
+    this.fileWatchers = this.orchestrator.fileWatchers;
+    this.pollingTimers = this.orchestrator.pollingTimers;
+    this.waitingTimers = this.orchestrator.waitingTimers;
+    this.jsonlPollTimers = this.orchestrator.jsonlPollTimers;
+    this.permissionTimers = this.orchestrator.permissionTimers;
+    this.activeAgentId = this.orchestrator.activeAgentId;
+    this.knownJsonlFiles = this.orchestrator.knownJsonlFiles;
+    this.projectScanTimer = this.orchestrator.projectScanTimer;
+    this.nextAgentId = this.orchestrator.nextAgentId;
+    this.nextTerminalIndex = this.orchestrator.nextTerminalIndex;
+
     this.initHooks();
   }
 
@@ -331,6 +374,11 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
 
   resolveWebviewView(webviewView: vscode.WebviewView) {
     this.webviewView = webviewView;
+    // Wire the orchestrator's MessageSender to this webview. Core modules
+    // invoked through the orchestrator will post messages here.
+    this.orchestrator.setMessageSender({
+      postMessage: (msg: unknown) => webviewView.webview.postMessage(msg),
+    });
     webviewView.webview.options = { enableScripts: true };
     webviewView.webview.html = getWebviewContent(webviewView.webview, this.extensionUri);
 
