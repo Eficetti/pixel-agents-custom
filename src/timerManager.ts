@@ -1,9 +1,7 @@
 import type * as vscode from 'vscode';
 
-import type * as CoreTimer from '../core/src/timerManager.js' with { 'resolution-mode': 'import' };
+import * as coreTimer from '../core/src/timerManager.js';
 import type { AgentState } from './types.js';
- 
-const coreTimer = require('../core/src/timerManager.js') as typeof CoreTimer;
 
 function toSender(
   webview: vscode.Webview | undefined,
