@@ -5,6 +5,8 @@
  * Decides whether to prompt the user, install silently, or skip. See spec
  * docs/superpowers/specs/2026-04-16-agent-flows-dashboard-design.md § "CLI hooks bootstrap".
  */
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 export type HooksInstallAccepted = 'always' | 'ask' | 'never';
 
@@ -39,4 +41,32 @@ export function resolveDecision(decision: 'always' | 'once' | 'never'): {
     case 'never':
       return { install: false, persist: 'never' };
   }
+}
+
+/** Read ~/.pixel-agents/config.json. Returns {} on missing/malformed. */
+export function readHooksConfig(filePath: string): HooksConfig & Record<string, unknown> {
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return parsed as HooksConfig & Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Persist hooksInstallAccepted without clobbering other keys in config.json.
+ * Atomic write via .tmp + rename (matches layoutPersistence pattern).
+ */
+export async function writeHooksDecision(
+  filePath: string,
+  state: HooksInstallAccepted,
+): Promise<void> {
+  const dir = path.dirname(filePath);
+  await fs.promises.mkdir(dir, { recursive: true });
+  const existing = readHooksConfig(filePath) as Record<string, unknown>;
+  existing.hooksInstallAccepted = state;
+  const tmp = filePath + '.tmp';
+  await fs.promises.writeFile(tmp, JSON.stringify(existing, null, 2));
+  await fs.promises.rename(tmp, filePath);
 }
