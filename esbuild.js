@@ -100,6 +100,19 @@ function buildCli() {
     fs.cpSync(assetsSrc, assetsDst, { recursive: true });
     console.log('✓ Copied assets/ → cli/dist/assets/');
   }
+
+  // Copy hook script into cli/dist/hooks/ so copyHookScript() can find it.
+  const hooksSrc = path.join(__dirname, 'dist', 'hooks');
+  const hooksDst = path.join(cliDistDir, 'hooks');
+  if (fs.existsSync(hooksSrc)) {
+    if (fs.existsSync(hooksDst)) fs.rmSync(hooksDst, { recursive: true });
+    fs.cpSync(hooksSrc, hooksDst, { recursive: true });
+    console.log('✓ Copied dist/hooks/ → cli/dist/hooks/');
+  } else {
+    console.warn(
+      '⚠️  dist/hooks/ not found — run `node esbuild.js` (full build) first to generate hook script.',
+    );
+  }
 }
 
 /**

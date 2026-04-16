@@ -15,9 +15,20 @@ import type { DialogProvider, WorkspaceProvider } from '../../core/src/interface
 import { Orchestrator } from '../../core/src/orchestrator.js';
 import { HookEventHandler } from '../../server/src/hookEventHandler.js';
 import type { HookEvent } from '../../server/src/hookEventHandler.js';
-import { claudeProvider } from '../../server/src/providers/index.js';
+import {
+  areHooksInstalled,
+  installHooks,
+} from '../../server/src/providers/hook/claude/claudeHookInstaller.js';
+import { claudeProvider, copyHookScript } from '../../server/src/providers/index.js';
 import { PixelAgentsServer } from '../../server/src/server.js';
 import { startHost } from './host.js';
+import {
+  readHooksConfig,
+  resolveDecision,
+  shouldAutoInstall,
+  shouldPromptUser,
+  writeHooksDecision,
+} from './hooksBootstrap.js';
 import { CliProcessProvider } from './processProvider.js';
 import { FileStateStore } from './stateStore.js';
 
@@ -96,6 +107,64 @@ const cliDialogProvider: DialogProvider = {
   },
 };
 
+/**
+ * Copy the hook script from the CLI bundle to ~/.pixel-agents/hooks/ and
+ * install hook entries in ~/.claude/settings.json.
+ *
+ * `copyHookScript` expects an `extensionPath` whose `dist/hooks/` subdirectory
+ * contains the built hook script. In the CLI bundle, `distDir` is `cli/dist`,
+ * so passing its parent (`cli/`) satisfies `path.join(extensionPath, 'dist', 'hooks', ...)`.
+ */
+function doInstall(distDir: string): void {
+  copyHookScript(path.join(distDir, '..'));
+  installHooks();
+}
+
+async function runHooksBootstrap(
+  args: Args,
+  orchestrator: Orchestrator,
+  distDir: string,
+  configPath: string,
+): Promise<void> {
+  if (!args.hooks) {
+    console.log('[pixel-agents] Hooks skipped (--no-hooks)');
+    return;
+  }
+  const config = readHooksConfig(configPath);
+  const installed = areHooksInstalled();
+
+  if (shouldAutoInstall(config, installed)) {
+    doInstall(distDir);
+    return;
+  }
+
+  if (!shouldPromptUser(config, installed)) return;
+
+  // Ask the user via webview. Waits up to 5min; resolves to decision or null on timeout.
+  const decision = await orchestrator.requestDecision<'always' | 'once' | 'never'>(
+    { type: 'hooksInstallPrompt' },
+    'hooksInstallDecision',
+  );
+  if (!decision) return; // timeout: keep state as-is, user can retry next boot
+
+  const resolved = resolveDecision(decision);
+  await writeHooksDecision(configPath, resolved.persist);
+  if (!resolved.install) return;
+
+  try {
+    doInstall(distDir);
+    orchestrator.getMessageSender()?.postMessage({ type: 'hooksInstallResult', installed: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[pixel-agents] Hook install failed:', message);
+    orchestrator.getMessageSender()?.postMessage({
+      type: 'hooksInstallResult',
+      installed: false,
+      error: message,
+    });
+  }
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const homeDir = process.env.HOME ?? process.env.USERPROFILE ?? '';
@@ -159,6 +228,12 @@ async function main(): Promise<void> {
     assetsDir,
     orchestrator,
   });
+
+  // Don't await hooks bootstrap — let it run in background once webview connects.
+  const configPath = path.join(pixelAgentsDir, 'config.json');
+  void orchestrator
+    .waitForWebview()
+    .then(() => runHooksBootstrap(args, orchestrator, distDir, configPath));
 
   const url = `http://localhost:${host.port}`;
   const openCmd =

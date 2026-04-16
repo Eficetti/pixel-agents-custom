@@ -78,8 +78,24 @@ export class Orchestrator {
 
   private messageSender: MessageSender | undefined;
   private pendingDecisions = new Map<string, (value: unknown) => void>();
+  private webviewReadyOnce: Promise<void> | null = null;
+  private webviewReadyResolve: (() => void) | null = null;
 
   constructor(readonly config: OrchestratorConfig) {}
+
+  /**
+   * Returns a promise that resolves once the webview sends its first `webviewReady`
+   * message. If called after webviewReady has already fired, the returned promise
+   * resolves immediately (the settled promise is reused).
+   */
+  waitForWebview(): Promise<void> {
+    if (!this.webviewReadyOnce) {
+      this.webviewReadyOnce = new Promise((resolve) => {
+        this.webviewReadyResolve = resolve;
+      });
+    }
+    return this.webviewReadyOnce;
+  }
 
   /**
    * Send a message that expects a response from the webview. Returns a promise
@@ -200,6 +216,8 @@ export class Orchestrator {
   async handleMessage(msg: IncomingMessage): Promise<boolean> {
     switch (msg.type) {
       case 'webviewReady':
+        // Unblock any awaited waitForWebview() — must fire before async work below.
+        this.webviewReadyResolve?.();
         // Load + broadcast every asset set the webview expects on boot. Order
         // matters: characterSpritesLoaded → floorTilesLoaded → wallTilesLoaded
         // → furnitureAssetsLoaded → layoutLoaded, matching what
