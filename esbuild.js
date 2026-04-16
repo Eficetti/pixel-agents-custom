@@ -37,11 +37,15 @@ function buildHooks() {
     'server',
     'src',
     'providers',
-    'file',
+    'hook',
+    'claude',
     'hooks',
     'claude-hook.ts',
   );
-  if (!fs.existsSync(entry)) return;
+  if (!fs.existsSync(entry)) {
+    console.warn(`⚠️  hooks entry not found at ${entry} — skipping buildHooks`);
+    return;
+  }
   require('esbuild').buildSync({
     entryPoints: [entry],
     bundle: true,
