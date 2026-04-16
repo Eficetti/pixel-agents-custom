@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shouldPromptUser } from '../src/hooksBootstrap.js';
+import { shouldPromptUser, shouldAutoInstall, resolveDecision } from '../src/hooksBootstrap.js';
 
 describe('hooksBootstrap.shouldPromptUser', () => {
   it('returns false when hooks already installed', () => {
@@ -20,5 +20,34 @@ describe('hooksBootstrap.shouldPromptUser', () => {
 
   it('returns true when no state persisted (default=ask) and not installed', () => {
     expect(shouldPromptUser({}, /*installed=*/ false)).toBe(true);
+  });
+});
+
+describe('hooksBootstrap.shouldAutoInstall', () => {
+  it('returns true when always + not installed', () => {
+    expect(shouldAutoInstall({ hooksInstallAccepted: 'always' }, false)).toBe(true);
+  });
+
+  it('returns false when already installed (nothing to do)', () => {
+    expect(shouldAutoInstall({ hooksInstallAccepted: 'always' }, true)).toBe(false);
+  });
+
+  it('returns false for ask or never', () => {
+    expect(shouldAutoInstall({ hooksInstallAccepted: 'ask' }, false)).toBe(false);
+    expect(shouldAutoInstall({ hooksInstallAccepted: 'never' }, false)).toBe(false);
+  });
+});
+
+describe('hooksBootstrap.resolveDecision', () => {
+  it('always → install + persist always', () => {
+    expect(resolveDecision('always')).toEqual({ install: true, persist: 'always' });
+  });
+
+  it('once → install + persist ask (so we re-ask if user externally uninstalls)', () => {
+    expect(resolveDecision('once')).toEqual({ install: true, persist: 'ask' });
+  });
+
+  it('never → do not install + persist never', () => {
+    expect(resolveDecision('never')).toEqual({ install: false, persist: 'never' });
   });
 });
