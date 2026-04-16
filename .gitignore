@@ -35,3 +35,9 @@ playwright-report/
 
 # Local notes (not for commit)
 /notes/
+
+# Git worktrees
+.worktrees/
+
+# Brainstorm sessions
+.superpowers/
