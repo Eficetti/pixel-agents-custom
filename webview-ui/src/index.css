@@ -39,6 +39,10 @@
 
   /* Shadow */
   --shadow-pixel: 2px 2px 0px #0a0a14;
+  --pixel-shadow: 2px 2px 0px #0a0a14;
+
+  /* Modal & Overlay */
+  --modal-overlay-bg: rgba(0, 0, 0, 0.5);
 
   /* Non-utility values */
   --vignette: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.6) 100%);
