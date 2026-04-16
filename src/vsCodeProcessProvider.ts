@@ -25,10 +25,14 @@ export class VsCodeProcessProvider implements ProcessProvider {
     });
   }
 
-  spawn(_name: string, _command: string, _args: string[], _cwd: string): AgentProcess {
-    throw new Error(
-      'VsCodeProcessProvider.spawn() is not yet implemented; use vscode.window.createTerminal + wrapTerminal for now.',
-    );
+  spawn(name: string, command: string, args: string[], cwd: string): AgentProcess {
+    const terminal = vscode.window.createTerminal({ name, cwd });
+    // VS Code terminals are shells: send the command text so Claude runs inside.
+    // CLI hosts would fork a child_process directly — this shell-dispatch quirk
+    // stays contained in the VS Code adapter.
+    const cmdLine = [command, ...args].join(' ');
+    terminal.sendText(cmdLine);
+    return wrapTerminal(terminal)!;
   }
 
   listAll(): AgentProcess[] {
