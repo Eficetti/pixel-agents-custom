@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import type { AgentProcess } from '../core/src/interfaces.js' with { 'resolution-mode': 'import' };
+import type { AgentProcess } from '../core/src/interfaces.js';
 
 /**
  * Wraps a vscode.Terminal as an AgentProcess so AgentState.processRef can hold it.
@@ -11,7 +11,8 @@ export class VsCodeTerminalAdapter implements AgentProcess {
 
   get id(): string {
     // vscode.Terminal has no stable string ID; use the terminal name + creation index.
-    // For identity comparison, callers should compare `.terminal` directly.
+    // For identity comparison, callers should compare the adapter instance directly
+    // (cache below ensures reference stability per vscode.Terminal).
     return this.terminal.name;
   }
 
@@ -46,11 +47,22 @@ export class VsCodeTerminalAdapter implements AgentProcess {
   }
 }
 
-/** Wrap a vscode.Terminal in an adapter, or return undefined if terminal is undefined. */
+// Single cache shared by wrapTerminal() and VsCodeProcessProvider. Ensures that the
+// same vscode.Terminal always returns the same adapter instance, so reference
+// equality works in core (e.g. `agent.processRef === processProvider.getActive()`).
+const adapterCache = new WeakMap<vscode.Terminal, VsCodeTerminalAdapter>();
+
+/** Wrap a vscode.Terminal in an adapter (cached), or return undefined if terminal is undefined. */
 export function wrapTerminal(
   terminal: vscode.Terminal | undefined,
 ): VsCodeTerminalAdapter | undefined {
-  return terminal !== undefined ? new VsCodeTerminalAdapter(terminal) : undefined;
+  if (terminal === undefined) return undefined;
+  let adapter = adapterCache.get(terminal);
+  if (!adapter) {
+    adapter = new VsCodeTerminalAdapter(terminal);
+    adapterCache.set(terminal, adapter);
+  }
+  return adapter;
 }
 
 /** Extract the underlying vscode.Terminal from a processRef, if it is a VsCodeTerminalAdapter. */
