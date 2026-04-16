@@ -72,7 +72,7 @@ function App() {
     hooksEnabled,
     setHooksEnabled,
     hooksInfoShown,
-    showHooksInstallPrompt,
+    hooksInstallRequestId,
     dismissHooksInstallPrompt,
   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
 
@@ -366,7 +366,9 @@ function App() {
         }}
       />
 
-      {showHooksInstallPrompt && <FirstRunHooksModal onClose={dismissHooksInstallPrompt} />}
+      {hooksInstallRequestId && (
+        <FirstRunHooksModal requestId={hooksInstallRequestId} onClose={dismissHooksInstallPrompt} />
+      )}
 
       {showMigrationNotice && (
         <MigrationNotice onDismiss={() => setMigrationNoticeDismissed(true)} />

@@ -10,12 +10,13 @@ import { vscode } from '../vscodeApi.js';
  * Styling: matches SettingsModal (pixel borders, #1e1e2e bg, hard shadow).
  */
 interface Props {
+  requestId: string;
   onClose: () => void;
 }
 
-export function FirstRunHooksModal({ onClose }: Props): JSX.Element {
+export function FirstRunHooksModal({ requestId, onClose }: Props): JSX.Element {
   const send = (decision: 'always' | 'once' | 'never') => {
-    vscode.postMessage({ type: 'hooksInstallDecision', decision });
+    vscode.postMessage({ type: 'hooksInstallDecision', decision, requestId });
     onClose();
   };
 

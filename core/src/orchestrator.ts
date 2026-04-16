@@ -77,8 +77,40 @@ export class Orchestrator {
   readonly projectScanTimer = { current: null as ReturnType<typeof setInterval> | null };
 
   private messageSender: MessageSender | undefined;
+  private pendingDecisions = new Map<string, (value: unknown) => void>();
 
   constructor(readonly config: OrchestratorConfig) {}
+
+  /**
+   * Send a message that expects a response from the webview. Returns a promise
+   * that resolves when the webview posts back a message with matching `type` + `id`.
+   * Times out after 5 minutes (user probably walked away).
+   */
+  async requestDecision<T>(
+    requestMessage: { type: string; [k: string]: unknown },
+    responseType: string,
+  ): Promise<T | null> {
+    const id = `${responseType}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    this.messageSender?.postMessage({ ...requestMessage, requestId: id });
+    return new Promise<T | null>((resolve) => {
+      this.pendingDecisions.set(id, (value) => resolve(value as T));
+      setTimeout(() => {
+        if (this.pendingDecisions.has(id)) {
+          this.pendingDecisions.delete(id);
+          resolve(null);
+        }
+      }, 5 * 60_000);
+    });
+  }
+
+  /** Called from handleMessage when a 'decision' type message arrives. Drains the matching pending. */
+  private resolveDecision(requestId: string, value: unknown): boolean {
+    const cb = this.pendingDecisions.get(requestId);
+    if (!cb) return false;
+    this.pendingDecisions.delete(requestId);
+    cb(value);
+    return true;
+  }
 
   setMessageSender(sender: MessageSender | undefined): void {
     this.messageSender = sender;
@@ -185,6 +217,13 @@ export class Orchestrator {
       case 'closeAgent':
         this.closeAgent(msg.id as number);
         return true;
+      case 'hooksInstallDecision': {
+        const requestId = (msg.requestId as string) ?? '';
+        if (this.resolveDecision(requestId, msg.decision)) return true;
+        // Fallback: if the message arrived without requestId (older webview build), log & drop.
+        console.warn('[pixel-agents] hooksInstallDecision received without requestId');
+        return true;
+      }
       default:
         return false; // Not handled — let caller try its own cases.
     }
