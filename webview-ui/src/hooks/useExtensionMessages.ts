@@ -273,7 +273,13 @@ export function useExtensionMessages(
           !runInBackground &&
           !toolId.startsWith('hook-')
         ) {
-          const label = status.startsWith('Subtask:') ? status.slice('Subtask:'.length).trim() : '';
+          // Cave theme label prefix ('Faena:'). Older 'Subtask:' kept as fallback
+          // for compatibility with previously-cached status strings.
+          const label = status.startsWith('Faena:')
+            ? status.slice('Faena:'.length).trim()
+            : status.startsWith('Subtask:')
+              ? status.slice('Subtask:'.length).trim()
+              : '';
           const subId = os.addSubagent(id, toolId);
           setSubagentCharacters((prev) => {
             if (prev.some((s) => s.id === subId)) return prev;

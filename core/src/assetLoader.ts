@@ -393,6 +393,13 @@ export async function loadCharacterSprites(
       characters.push(decodeCharacterPng(pngBuffer));
     }
 
+    // Optional capataz sprite at index CHAR_COUNT. Cave theme only — older
+    // themes without it fall back gracefully (no boss = no capataz swap).
+    const bossPath = path.join(charDir, 'char_boss.png');
+    if (fs.existsSync(bossPath)) {
+      characters.push(decodeCharacterPng(fs.readFileSync(bossPath)));
+    }
+
     console.log(
       `[AssetLoader] ✅ Loaded ${characters.length} character sprites (${CHAR_FRAMES_PER_ROW} frames × 3 directions each)`,
     );

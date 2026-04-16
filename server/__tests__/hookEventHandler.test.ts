@@ -470,7 +470,7 @@ describe('HookEventHandler', () => {
     const toolMsg = mockWebview.messages.find((m) => m.type === 'agentToolStart');
     expect(toolMsg).toBeTruthy();
     expect(toolMsg?.toolName).toBe('Read');
-    expect(toolMsg?.status).toBe('Reading server.ts');
+    expect(toolMsg?.status).toBe('Examinando server.ts');
     expect(agent.currentHookToolId).toBeTruthy();
   });
 

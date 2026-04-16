@@ -17,3 +17,8 @@ export const CHAR_FRAME_W = 16;
 export const CHAR_FRAME_H = 32;
 export const CHAR_FRAMES_PER_ROW = 7;
 export const CHAR_COUNT = 6;
+
+/** Palette index reserved for the capataz sprite (char_boss.png). Loaded after the
+ *  regular 6 miners, so index = CHAR_COUNT. Not assigned to agents by default;
+ *  only used when a character is marked as capataz (has active sub-agents). */
+export const BOSS_PALETTE_INDEX = CHAR_COUNT;

@@ -172,6 +172,15 @@ export interface Character {
   isSubagent: boolean;
   /** Parent agent ID if this is a sub-agent, null otherwise */
   parentAgentId: number | null;
+  /** When true, the agent is currently orchestrating sub-agents — rendered with the
+   *  capataz sprite (BOSS_PALETTE_INDEX) instead of the miner palette. Flips on
+   *  in addSubagent() and off when removeAllSubagents() drains the subagent map. */
+  isCapataz?: boolean;
+  /** Miner palette preserved while isCapataz is true, so we can revert once the
+   *  orchestrator finishes. Only set when isCapataz flips true. */
+  minerPalette?: number;
+  /** Miner hue shift preserved alongside minerPalette. */
+  minerHueShift?: number;
   /** Active matrix spawn/despawn effect, or null */
   matrixEffect: 'spawn' | 'despawn' | null;
   /** Timer counting up from 0 to MATRIX_EFFECT_DURATION */

@@ -1,14 +1,16 @@
-/** Map status prefixes back to tool names for animation selection */
+/** Map status prefixes back to tool names for animation selection.
+ *  Prefixes match the Spanish mining-theme labels emitted by
+ *  server/src/providers/hook/claude/claude.ts#formatToolStatus. */
 const STATUS_TO_TOOL: Record<string, string> = {
-  Reading: 'Read',
-  Searching: 'Grep',
-  Globbing: 'Glob',
-  Fetching: 'WebFetch',
-  'Searching web': 'WebSearch',
-  Writing: 'Write',
-  Editing: 'Edit',
-  Running: 'Bash',
-  Task: 'Task',
+  Examinando: 'Read',
+  'Buscando veta': 'Grep',
+  Explorando: 'Glob',
+  Extrayendo: 'WebFetch',
+  Prospectando: 'WebSearch',
+  Picando: 'Write',
+  Tallando: 'Edit',
+  Excavando: 'Bash',
+  Faena: 'Task',
 };
 
 export function extractToolName(status: string): string | null {

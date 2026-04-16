@@ -52,48 +52,49 @@ export function formatToolStatus(toolName: string, input: Record<string, unknown
  *  Mirrors Claude's formatting; most code paths use the provider's implementation. */
 function defaultFormatToolStatus(toolName: string, input: Record<string, unknown>): string {
   const base = (p: unknown) => (typeof p === 'string' ? path.basename(p) : '');
+  // Cave-mine theme fallback labels (matches claude provider's formatToolStatus).
   switch (toolName) {
     case 'Read':
-      return `Reading ${base(input.file_path)}`;
+      return `Examinando ${base(input.file_path)}`;
     case 'Edit':
-      return `Editing ${base(input.file_path)}`;
+      return `Tallando ${base(input.file_path)}`;
     case 'Write':
-      return `Writing ${base(input.file_path)}`;
+      return `Picando ${base(input.file_path)}`;
     case 'Bash': {
       const cmd = (input.command as string) || '';
-      return `Running: ${cmd.length > BASH_COMMAND_DISPLAY_MAX_LENGTH ? cmd.slice(0, BASH_COMMAND_DISPLAY_MAX_LENGTH) + '\u2026' : cmd}`;
+      return `Excavando: ${cmd.length > BASH_COMMAND_DISPLAY_MAX_LENGTH ? cmd.slice(0, BASH_COMMAND_DISPLAY_MAX_LENGTH) + '\u2026' : cmd}`;
     }
     case 'Glob':
-      return 'Searching files';
+      return 'Explorando túneles';
     case 'Grep':
-      return 'Searching code';
+      return 'Buscando veta';
     case 'WebFetch':
-      return 'Fetching web content';
+      return 'Extrayendo mineral';
     case 'WebSearch':
-      return 'Searching the web';
+      return 'Prospectando';
     case 'Task':
     case 'Agent': {
       const desc = typeof input.description === 'string' ? input.description : '';
       return desc
-        ? `Subtask: ${desc.length > TASK_DESCRIPTION_DISPLAY_MAX_LENGTH ? desc.slice(0, TASK_DESCRIPTION_DISPLAY_MAX_LENGTH) + '\u2026' : desc}`
-        : 'Running subtask';
+        ? `Faena: ${desc.length > TASK_DESCRIPTION_DISPLAY_MAX_LENGTH ? desc.slice(0, TASK_DESCRIPTION_DISPLAY_MAX_LENGTH) + '\u2026' : desc}`
+        : 'Asignando faena';
     }
     case 'AskUserQuestion':
-      return 'Waiting for your answer';
+      return 'Esperando orden del capataz';
     case 'EnterPlanMode':
-      return 'Planning';
+      return 'Planificando la jornada';
     case 'NotebookEdit':
-      return `Editing notebook`;
+      return 'Tallando bitácora';
     case 'TeamCreate': {
       const teamName = typeof input.team_name === 'string' ? input.team_name : '';
-      return teamName ? `Creating team: ${teamName}` : 'Creating team';
+      return teamName ? `Formando cuadrilla: ${teamName}` : 'Formando cuadrilla';
     }
     case 'SendMessage': {
       const recipient = typeof input.recipient === 'string' ? input.recipient : '';
-      return recipient ? `-> ${recipient}` : 'Sending message';
+      return recipient ? `-> ${recipient}` : 'Enviando mensaje';
     }
     default:
-      return `Using ${toolName}`;
+      return `Usando ${toolName}`;
   }
 }
 

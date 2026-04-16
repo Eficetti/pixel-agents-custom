@@ -1,3 +1,4 @@
+import { BOSS_PALETTE_INDEX } from '../../../../shared/assets/constants.ts';
 import {
   AUTO_ON_FACING_DEPTH,
   AUTO_ON_SIDE_DEPTH,
@@ -10,6 +11,7 @@ import {
   HUE_SHIFT_RANGE_DEG,
   INACTIVE_SEAT_TIMER_MIN_SEC,
   INACTIVE_SEAT_TIMER_RANGE_SEC,
+  PALETTE_COUNT,
   WAITING_BUBBLE_DURATION_SEC,
 } from '../../constants.js';
 import { getAnimationFrames, getCatalogEntry, getOnStateType } from '../layout/furnitureCatalog.js';
@@ -238,8 +240,10 @@ export class OfficeState {
    * repeat in balanced rounds with a random hue shift (≥45°).
    */
   private pickDiversePalette(): { palette: number; hueShift: number } {
-    // Count how many non-sub-agents use each base palette (0-5)
-    const paletteCount = getLoadedCharacterCount();
+    // Count how many non-sub-agents use each miner palette. Cap at PALETTE_COUNT
+    // so the capataz sprite (loaded at index PALETTE_COUNT) is never assigned to
+    // regular agents — it's reserved for the orchestrator role.
+    const paletteCount = Math.min(getLoadedCharacterCount(), PALETTE_COUNT);
     const counts = new Array(paletteCount).fill(0) as number[];
     for (const ch of this.characters.values()) {
       if (ch.isSubagent) continue;
@@ -484,6 +488,16 @@ export class OfficeState {
 
     this.subagentIdMap.set(key, id);
     this.subagentMeta.set(id, { parentAgentId, parentToolId });
+
+    // Promote parent to capataz: save original palette, swap to boss sprite.
+    if (parentCh && !parentCh.isCapataz) {
+      parentCh.isCapataz = true;
+      parentCh.minerPalette = parentCh.palette;
+      parentCh.minerHueShift = parentCh.hueShift;
+      parentCh.palette = BOSS_PALETTE_INDEX;
+      parentCh.hueShift = 0;
+    }
+
     return id;
   }
 
@@ -516,6 +530,9 @@ export class OfficeState {
     this.subagentMeta.delete(id);
     if (this.selectedAgentId === id) this.selectedAgentId = null;
     if (this.cameraFollowId === id) this.cameraFollowId = null;
+
+    // If the parent no longer has any sub-agents, revert capataz → miner.
+    this.revertCapatazIfIdle(parentAgentId);
   }
 
   /** Remove all sub-agents belonging to a parent agent */
@@ -551,6 +568,23 @@ export class OfficeState {
     for (const key of toRemove) {
       this.subagentIdMap.delete(key);
     }
+
+    this.revertCapatazIfIdle(parentAgentId);
+  }
+
+  /** Revert a capataz back to miner sprite when their last sub-agent clears. */
+  private revertCapatazIfIdle(parentAgentId: number): void {
+    const ch = this.characters.get(parentAgentId);
+    if (!ch || !ch.isCapataz) return;
+    // Any remaining sub-agent for this parent? If so, stay capataz.
+    for (const meta of this.subagentMeta.values()) {
+      if (meta.parentAgentId === parentAgentId) return;
+    }
+    ch.isCapataz = false;
+    ch.palette = ch.minerPalette ?? ch.palette;
+    ch.hueShift = ch.minerHueShift ?? 0;
+    ch.minerPalette = undefined;
+    ch.minerHueShift = undefined;
   }
 
   /** Look up the sub-agent character ID for a given parent+toolId, or null */

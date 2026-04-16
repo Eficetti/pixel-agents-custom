@@ -72,7 +72,7 @@ export const ROTATE_BUTTON_BG = 'rgba(50, 120, 200, 0.85)';
 export const BUTTON_ICON_COLOR = '#fff';
 export const CANVAS_FALLBACK_TILE_COLOR = '#444';
 export const CANVAS_ERROR_TILE_COLOR = '#FF00FF';
-export const WALL_COLOR = '#3A3A5C';
+export const WALL_COLOR = '#2A1F0F';
 
 // ── Camera ───────────────────────────────────────────────────
 export const CAMERA_FOLLOW_LERP = 0.1;
@@ -91,8 +91,8 @@ export const PAN_MARGIN_FRACTION = 0.25;
 // ── Editor ───────────────────────────────────────────────────
 export const UNDO_STACK_MAX_SIZE = 50;
 export const LAYOUT_SAVE_DEBOUNCE_MS = 500;
-export const DEFAULT_FLOOR_COLOR: ColorValue = { h: 35, s: 30, b: 15, c: 0 };
-export const DEFAULT_WALL_COLOR: ColorValue = { h: 240, s: 25, b: 0, c: 0 };
+export const DEFAULT_FLOOR_COLOR: ColorValue = { h: 25, s: 40, b: 10, c: 0 };
+export const DEFAULT_WALL_COLOR: ColorValue = { h: 30, s: 30, b: 5, c: 0 };
 export const DEFAULT_NEUTRAL_COLOR: ColorValue = { h: 0, s: 0, b: 0, c: 0 };
 
 // ── Notification Sound (done: ascending chime) ─────────────
