@@ -13,6 +13,10 @@ import { fileURLToPath } from 'node:url';
 
 import type { DialogProvider, WorkspaceProvider } from '../../core/src/interfaces.js';
 import { Orchestrator } from '../../core/src/orchestrator.js';
+import { HookEventHandler } from '../../server/src/hookEventHandler.js';
+import type { HookEvent } from '../../server/src/hookEventHandler.js';
+import { claudeProvider } from '../../server/src/providers/index.js';
+import { PixelAgentsServer } from '../../server/src/server.js';
 import { startHost } from './host.js';
 import { CliProcessProvider } from './processProvider.js';
 import { FileStateStore } from './stateStore.js';
@@ -21,12 +25,14 @@ interface Args {
   target: 'browser' | 'electron';
   port: number;
   project: string;
+  hooks: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
   let target: 'browser' | 'electron' = 'browser';
   let port = 3000;
   let project = process.cwd();
+  let hooks = true;
 
   for (let i = 0; i < argv.length; i++) {
     switch (argv[i]) {
@@ -39,6 +45,9 @@ function parseArgs(argv: string[]): Args {
       case '--project':
         project = path.resolve(argv[++i]!);
         break;
+      case '--no-hooks':
+        hooks = false;
+        break;
       case '--help':
       case '-h':
         printHelp();
@@ -46,7 +55,7 @@ function parseArgs(argv: string[]): Args {
     }
   }
 
-  return { target, port, project };
+  return { target, port, project, hooks };
 }
 
 function printHelp(): void {
@@ -54,12 +63,13 @@ function printHelp(): void {
 pixel-agents — pixel art visualization for Claude Code agents
 
 Usage:
-  pixel-agents [--target browser|electron] [--port 3000] [--project .]
+  pixel-agents [--target browser|electron] [--port 3000] [--project .] [--no-hooks]
 
 Options:
   --target    browser (default) or electron — where to render the webview
   --port      HTTP+WebSocket port (default 3000)
   --project   Project root to scan for sessions (default: cwd)
+  --no-hooks  Skip hook auto-install (falls back to JSONL polling)
   --help      Show this message
 `);
 }
@@ -114,6 +124,29 @@ async function main(): Promise<void> {
     buildArgs: (sessionId) => ['--session-id', sessionId],
   });
 
+  // Hook pipeline: PixelAgentsServer receives hook POSTs, HookEventHandler routes
+  // them to agents. Both are instantiated even when --no-hooks is set, because
+  // the hook install step is what --no-hooks gates; the server is cheap to run
+  // and provides discovery via ~/.pixel-agents/server.json.
+  const watchAllSessions = { current: false };
+  const hookEventHandler = new HookEventHandler(
+    orchestrator.agents,
+    orchestrator.waitingTimers,
+    orchestrator.permissionTimers,
+    () => orchestrator.getMessageSender(),
+    claudeProvider,
+    watchAllSessions,
+  );
+
+  const hookServer = new PixelAgentsServer();
+  hookServer.onHookEvent((providerId, event) =>
+    hookEventHandler.handleEvent(providerId, event as HookEvent),
+  );
+  await hookServer.start();
+  if (!args.hooks) {
+    console.log('[pixel-agents] --no-hooks: hook auto-install skipped (JSONL polling active)');
+  }
+
   if (args.target === 'electron') {
     const { startElectron } = await import('./electron.js');
     await startElectron({ port: args.port, webviewDir, assetsDir, orchestrator });
@@ -144,6 +177,7 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => {
     console.log('\n[pixel-agents] Shutting down...');
     orchestrator.dispose();
+    hookServer.stop();
     void host.close().then(() => process.exit(0));
   });
 }
