@@ -66,6 +66,8 @@ interface ExtensionMessageState {
   hooksEnabled: boolean;
   setHooksEnabled: (v: boolean) => void;
   hooksInfoShown: boolean;
+  showHooksInstallPrompt: boolean;
+  dismissHooksInstallPrompt: () => void;
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -103,6 +105,7 @@ export function useExtensionMessages(
   const [alwaysShowLabels, setAlwaysShowLabels] = useState(false);
   const [hooksEnabled, setHooksEnabled] = useState(true);
   const [hooksInfoShown, setHooksInfoShown] = useState(true);
+  const [showHooksInstallPrompt, setShowHooksInstallPrompt] = useState(false);
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false);
@@ -514,6 +517,14 @@ export function useExtensionMessages(
       } else if (msg.type === 'agentTokenUsage') {
         const id = msg.id as number;
         os.setAgentTokens(id, msg.inputTokens as number, msg.outputTokens as number);
+      } else if (msg.type === 'hooksInstallPrompt') {
+        setShowHooksInstallPrompt(true);
+      } else if (msg.type === 'hooksInstallResult') {
+        // Close modal when backend confirms install attempt finished.
+        setShowHooksInstallPrompt(false);
+        if (!msg.installed && msg.error) {
+          console.warn('[pixel-agents] Hook install failed:', msg.error);
+        }
       }
     };
     const unsubscribe = transport.onMessage(handler);
@@ -542,5 +553,7 @@ export function useExtensionMessages(
     hooksEnabled,
     setHooksEnabled,
     hooksInfoShown,
+    showHooksInstallPrompt,
+    dismissHooksInstallPrompt: () => setShowHooksInstallPrompt(false),
   };
 }

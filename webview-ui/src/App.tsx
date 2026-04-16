@@ -5,6 +5,7 @@ import { BottomToolbar } from './components/BottomToolbar.js';
 import { ChangelogModal } from './components/ChangelogModal.js';
 import { DebugView } from './components/DebugView.js';
 import { EditActionBar } from './components/EditActionBar.js';
+import { FirstRunHooksModal } from './components/FirstRunHooksModal.js';
 import { MigrationNotice } from './components/MigrationNotice.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import { Tooltip } from './components/Tooltip.js';
@@ -71,6 +72,8 @@ function App() {
     hooksEnabled,
     setHooksEnabled,
     hooksInfoShown,
+    showHooksInstallPrompt,
+    dismissHooksInstallPrompt,
   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
 
   // Show migration notice once layout reset is detected
@@ -362,6 +365,8 @@ function App() {
           vscode.postMessage({ type: 'setHooksEnabled', enabled: newVal });
         }}
       />
+
+      {showHooksInstallPrompt && <FirstRunHooksModal onClose={dismissHooksInstallPrompt} />}
 
       {showMigrationNotice && (
         <MigrationNotice onDismiss={() => setMigrationNoticeDismissed(true)} />
