@@ -17,6 +17,17 @@ import {
   sendCurrentAgentStatuses,
   sendExistingAgents,
 } from './agentManager.js';
+import {
+  loadCharacterSprites,
+  loadDefaultLayout,
+  loadFloorTiles,
+  loadFurnitureAssets,
+  loadWallTiles,
+  sendAssetsToWebview,
+  sendCharacterSpritesToWebview,
+  sendFloorTilesToWebview,
+  sendWallTilesToWebview,
+} from './assetLoader.js';
 import type {
   DialogProvider,
   MessageSender,
@@ -157,6 +168,11 @@ export class Orchestrator {
   async handleMessage(msg: IncomingMessage): Promise<boolean> {
     switch (msg.type) {
       case 'webviewReady':
+        // Load + broadcast every asset set the webview expects on boot. Order
+        // matters: characterSpritesLoaded → floorTilesLoaded → wallTilesLoaded
+        // → furnitureAssetsLoaded → layoutLoaded, matching what
+        // PixelAgentsViewProvider sends in the VS Code host.
+        await this.sendAllAssets();
         sendExistingAgents(this.agents, this.config.workspaceState, this.messageSender);
         sendCurrentAgentStatuses(this.agents, this.messageSender);
         return true;
@@ -172,6 +188,31 @@ export class Orchestrator {
       default:
         return false; // Not handled — let caller try its own cases.
     }
+  }
+
+  /** Load every asset set and push it to the current MessageSender. Safe to
+   *  call repeatedly — loaders cache-less but each step short-circuits on
+   *  missing input (e.g. assetsRoot without /assets/ subdir). */
+  async sendAllAssets(): Promise<void> {
+    if (!this.messageSender) return;
+    const ms = this.messageSender;
+    const root = this.config.assetsRoot;
+
+    const chars = await loadCharacterSprites(root);
+    if (chars) sendCharacterSpritesToWebview(ms, chars);
+
+    const floors = await loadFloorTiles(root);
+    if (floors) sendFloorTilesToWebview(ms, floors);
+
+    const walls = await loadWallTiles(root);
+    if (walls) sendWallTilesToWebview(ms, walls);
+
+    const assets = await loadFurnitureAssets(root);
+    if (assets) sendAssetsToWebview(ms, assets);
+
+    // Default layout — webview expects layoutLoaded even if layout is null.
+    const layout = loadDefaultLayout(root);
+    ms.postMessage({ type: 'layoutLoaded', layout, wasReset: false });
   }
 
   /** Clear every timer + watcher. Host should call this on deactivate/exit. */

@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "pngjs": "^7.0.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {

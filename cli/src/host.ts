@@ -59,22 +59,30 @@ export function startHost(config: HostConfig): Promise<HostHandle> {
     const server = http.createServer((req, res) => {
       const url = new URL(req.url ?? '/', `http://localhost:${config.port}`);
 
-      // Static asset paths under /assets/ resolve to assetsDir; everything else
-      // to webviewDir. Falls back to index.html for SPA routes.
-      let filePath: string;
-      if (url.pathname.startsWith('/assets/')) {
-        filePath = path.join(config.assetsDir, url.pathname.slice('/assets/'.length));
-      } else {
-        filePath = path.join(config.webviewDir, url.pathname === '/' ? 'index.html' : url.pathname);
-        if (!fs.existsSync(filePath)) {
+      // Path resolution: always try webviewDir first. Vite's bundle references
+      // /assets/index-<hash>.css|js relative to '/', and webview-ui's build also
+      // copies webview-ui/public/assets (game sprites) under webviewDir/assets/,
+      // so a single tree serves both the SPA bundle and the game assets.
+      //
+      // If a file isn't present in webviewDir (e.g. fonts, future route), fall
+      // back to the orchestrator's assetsDir, then SPA-fallback to index.html
+      // for unknown routes so client-side routing still works.
+      const relativePath = url.pathname === '/' ? 'index.html' : url.pathname.replace(/^\/+/, '');
+      let filePath = path.join(config.webviewDir, relativePath);
+      let rootReal = path.resolve(config.webviewDir);
+
+      if (!fs.existsSync(filePath)) {
+        const fallback = path.join(config.assetsDir, relativePath.replace(/^assets\//, ''));
+        if (fs.existsSync(fallback)) {
+          filePath = fallback;
+          rootReal = path.resolve(config.assetsDir);
+        } else {
+          // Unknown route — SPA fallback.
           filePath = path.join(config.webviewDir, 'index.html');
         }
       }
 
       // Directory traversal guard.
-      const rootReal = path.resolve(
-        url.pathname.startsWith('/assets/') ? config.assetsDir : config.webviewDir,
-      );
       if (!path.resolve(filePath).startsWith(rootReal)) {
         res.writeHead(403);
         res.end('Forbidden');
