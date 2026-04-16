@@ -1,0 +1,22 @@
+{
+  "name": "@pixel-agents/cli",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "pixel-agents": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "node ../esbuild.js --cli",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.14",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.1"
+  }
+}
