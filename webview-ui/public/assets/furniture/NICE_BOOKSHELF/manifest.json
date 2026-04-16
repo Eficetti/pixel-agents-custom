@@ -1,0 +1,13 @@
+{
+  "id": "NICE_BOOKSHELF",
+  "name": "Nice Bookshelf",
+  "category": "storage",
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": false,
+  "backgroundTiles": 2,
+  "type": "asset",
+  "width": 32,
+  "height": 48,
+  "footprintW": 2,
+  "footprintH": 3
+}

@@ -1,0 +1,32 @@
+{
+  "id": "NICE_LAMP",
+  "name": "Nice Lamp",
+  "category": "electronics",
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": true,
+  "backgroundTiles": 1,
+  "type": "group",
+  "groupType": "state",
+  "members": [
+    {
+      "type": "asset",
+      "id": "NICE_LAMP_OFF",
+      "file": "NICE_LAMP_OFF.png",
+      "width": 16,
+      "height": 32,
+      "footprintW": 1,
+      "footprintH": 2,
+      "state": "off"
+    },
+    {
+      "type": "asset",
+      "id": "NICE_LAMP_ON",
+      "file": "NICE_LAMP_ON.png",
+      "width": 16,
+      "height": 32,
+      "footprintW": 1,
+      "footprintH": 2,
+      "state": "on"
+    }
+  ]
+}

@@ -65,6 +65,8 @@
     "lint": "eslint src server shared && cd webview-ui && eslint .",
     "lint:fix": "eslint src server shared --fix && cd webview-ui && eslint . --fix",
     "import-tileset": "tsx scripts/import-tileset-cli.ts",
+    "generate-cave-theme": "tsx scripts/generate-cave-theme.ts",
+    "generate-cave-layout": "tsx scripts/generate-cave-layout.ts",
     "format": "prettier --write \"src/**/*.ts\" \"server/**/*.ts\" \"shared/**/*.ts\" \"webview-ui/src/**/*.{ts,tsx,css}\" \"*.{js,mjs}\" \"webview-ui/*.{js,ts}\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"server/**/*.ts\" \"shared/**/*.ts\" \"webview-ui/src/**/*.{ts,tsx,css}\" \"*.{js,mjs}\" \"webview-ui/*.{js,ts}\"",
     "test:webview": "cd webview-ui && npm test",

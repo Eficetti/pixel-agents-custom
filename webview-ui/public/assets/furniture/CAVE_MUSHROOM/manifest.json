@@ -1,0 +1,13 @@
+{
+  "id": "CAVE_MUSHROOM",
+  "name": "Cave Mushroom",
+  "category": "decor",
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": false,
+  "backgroundTiles": 0,
+  "type": "asset",
+  "width": 16,
+  "height": 16,
+  "footprintW": 1,
+  "footprintH": 1
+}

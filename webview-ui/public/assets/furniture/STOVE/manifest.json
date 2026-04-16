@@ -1,0 +1,32 @@
+{
+  "id": "STOVE",
+  "name": "Stove",
+  "category": "electronics",
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": false,
+  "backgroundTiles": 1,
+  "type": "group",
+  "groupType": "state",
+  "members": [
+    {
+      "type": "asset",
+      "id": "STOVE_OFF",
+      "file": "STOVE_OFF.png",
+      "width": 32,
+      "height": 32,
+      "footprintW": 2,
+      "footprintH": 2,
+      "state": "off"
+    },
+    {
+      "type": "asset",
+      "id": "STOVE_ON",
+      "file": "STOVE_ON.png",
+      "width": 32,
+      "height": 32,
+      "footprintW": 2,
+      "footprintH": 2,
+      "state": "on"
+    }
+  ]
+}

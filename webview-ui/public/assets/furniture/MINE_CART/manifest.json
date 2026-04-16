@@ -1,0 +1,13 @@
+{
+  "id": "MINE_CART",
+  "name": "Mine Cart",
+  "category": "misc",
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": false,
+  "backgroundTiles": 0,
+  "type": "asset",
+  "width": 32,
+  "height": 16,
+  "footprintW": 2,
+  "footprintH": 1
+}
