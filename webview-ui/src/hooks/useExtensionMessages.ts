@@ -9,7 +9,7 @@ import { setCharacterTemplates } from '../office/sprites/spriteData.js';
 import { extractToolName } from '../office/toolUtils.js';
 import type { OfficeLayout, ToolActivity } from '../office/types.js';
 import { setWallSprites } from '../office/wallTiles.js';
-import { vscode } from '../vscodeApi.js';
+import { transport, vscode } from '../vscodeApi.js';
 
 export interface SubagentCharacter {
   id: number;
@@ -117,8 +117,10 @@ export function useExtensionMessages(
       folderName?: string;
     }> = [];
 
-    const handler = (e: MessageEvent) => {
-      const msg = e.data;
+    const handler = (incoming: unknown) => {
+      if (typeof incoming !== 'object' || incoming === null) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const msg = incoming as any;
       const os = getOfficeState();
 
       if (msg.type === 'layoutLoaded') {
@@ -508,9 +510,9 @@ export function useExtensionMessages(
         os.setAgentTokens(id, msg.inputTokens as number, msg.outputTokens as number);
       }
     };
-    window.addEventListener('message', handler);
+    const unsubscribe = transport.onMessage(handler);
     vscode.postMessage({ type: 'webviewReady' });
-    return () => window.removeEventListener('message', handler);
+    return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getOfficeState]);
 

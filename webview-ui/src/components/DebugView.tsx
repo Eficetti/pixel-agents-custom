@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { ToolActivity } from '../office/types.js';
-import { vscode } from '../vscodeApi.js';
+import { transport, vscode } from '../vscodeApi.js';
 import { Button } from './ui/Button.js';
 
 interface AgentDiagnostics {
@@ -79,18 +79,18 @@ export function DebugView({
 
   // Listen for diagnostics response
   useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      const msg = event.data;
-      if (msg.type === 'agentDiagnostics') {
+    const handler = (incoming: unknown) => {
+      if (typeof incoming !== 'object' || incoming === null) return;
+      const msg = incoming as { type?: string; agents?: AgentDiagnostics[] };
+      if (msg.type === 'agentDiagnostics' && msg.agents) {
         const map: Record<number, AgentDiagnostics> = {};
-        for (const a of msg.agents as AgentDiagnostics[]) {
+        for (const a of msg.agents) {
           map[a.id] = a;
         }
         setDiagnostics(map);
       }
     };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
+    return transport.onMessage(handler);
   }, []);
 
   const renderAgentCard = (id: number) => {
