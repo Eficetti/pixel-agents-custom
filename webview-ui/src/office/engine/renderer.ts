@@ -507,7 +507,7 @@ function renderBubbles(
 
     const cached = getCachedSprite(sprite, zoom);
     // Position: centered above the character's head
-    // Character is anchored bottom-center at (ch.x, ch.y), sprite is 16x24
+    // Character is anchored bottom-center at (ch.x, ch.y); sprite visible area = CHARACTER_HIT_HALF_WIDTH*2 × CHARACTER_HIT_HEIGHT
     // Place bubble above head with a small gap; follow sitting offset
     const sittingOff = ch.state === CharacterState.TYPE ? BUBBLE_SITTING_OFFSET_PX : 0;
     const bubbleX = Math.round(offsetX + ch.x * zoom - cached.width / 2);
