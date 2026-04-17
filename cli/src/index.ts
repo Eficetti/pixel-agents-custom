@@ -11,6 +11,7 @@ import { exec } from 'node:child_process';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { adoptExternalSessionFromHook } from '../../core/src/fileWatcher.js';
 import type { DialogProvider, WorkspaceProvider } from '../../core/src/interfaces.js';
 import { Orchestrator } from '../../core/src/orchestrator.js';
 import { HookEventHandler } from '../../server/src/hookEventHandler.js';
@@ -206,6 +207,28 @@ async function main(): Promise<void> {
     claudeProvider,
     watchAllSessions,
   );
+
+  // When the hook handler detects a new external session (a `claude` started
+  // in another terminal), create the agent on the Orchestrator and notify the
+  // webview. Without this callback, hook events arrive but no minero appears.
+  hookEventHandler.setLifecycleCallbacks({
+    onExternalSessionDetected: (sessionId, transcriptPath, cwd) => {
+      adoptExternalSessionFromHook(
+        sessionId,
+        transcriptPath,
+        cwd,
+        orchestrator.knownJsonlFiles,
+        orchestrator.nextAgentId,
+        orchestrator.agents,
+        orchestrator.fileWatchers,
+        orchestrator.pollingTimers,
+        orchestrator.waitingTimers,
+        orchestrator.permissionTimers,
+        orchestrator.getMessageSender(),
+        () => orchestrator.persistAgents(),
+      );
+    },
+  });
 
   const hookServer = new PixelAgentsServer();
   hookServer.onHookEvent((providerId, event) =>
