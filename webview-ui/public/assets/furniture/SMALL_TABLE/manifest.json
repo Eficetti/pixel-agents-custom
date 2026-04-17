@@ -13,8 +13,8 @@
       "type": "asset",
       "id": "SMALL_TABLE_FRONT",
       "file": "SMALL_TABLE_FRONT.png",
-      "width": 32,
-      "height": 32,
+      "width": 128,
+      "height": 128,
       "footprintW": 2,
       "footprintH": 2,
       "orientation": "front"
@@ -23,8 +23,8 @@
       "type": "asset",
       "id": "SMALL_TABLE_SIDE",
       "file": "SMALL_TABLE_SIDE.png",
-      "width": 16,
-      "height": 48,
+      "width": 64,
+      "height": 192,
       "footprintW": 1,
       "footprintH": 3,
       "orientation": "side"

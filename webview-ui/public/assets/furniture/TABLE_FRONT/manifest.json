@@ -6,8 +6,8 @@
   "canPlaceOnWalls": false,
   "canPlaceOnSurfaces": false,
   "backgroundTiles": 1,
-  "width": 48,
-  "height": 64,
+  "width": 192,
+  "height": 256,
   "footprintW": 3,
   "footprintH": 4
 }
