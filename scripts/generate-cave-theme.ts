@@ -23,25 +23,39 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ASSETS_ROOT = path.join(__dirname, '..', 'webview-ui', 'public', 'assets');
 
+// ── Render scale ─────────────────────────────────────────────
+// Single source of truth for 4× upscale. The drawing code expresses coordinates
+// in "logical 16-px units"; the Canvas class turns every logical pixel into a
+// SCALE×SCALE block, producing 4× output without touching call sites.
+const SCALE = 4;
+
 // ── Canvas primitive ─────────────────────────────────────────
 class Canvas {
   readonly data: Uint8Array;
+  readonly pw: number; // physical width (w * SCALE)
+  readonly ph: number; // physical height (h * SCALE)
 
   constructor(
     readonly w: number,
     readonly h: number,
   ) {
-    this.data = new Uint8Array(w * h * 4); // RGBA, all zero (transparent)
+    this.pw = w * SCALE;
+    this.ph = h * SCALE;
+    this.data = new Uint8Array(this.pw * this.ph * 4); // RGBA, all zero
   }
 
   pixel(x: number, y: number, hex: string, alpha = 255): void {
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
     const [r, g, b] = parseHex(hex);
-    const i = (y * this.w + x) * 4;
-    this.data[i] = r;
-    this.data[i + 1] = g;
-    this.data[i + 2] = b;
-    this.data[i + 3] = alpha;
+    for (let dy = 0; dy < SCALE; dy++) {
+      for (let dx = 0; dx < SCALE; dx++) {
+        const i = ((y * SCALE + dy) * this.pw + (x * SCALE + dx)) * 4;
+        this.data[i] = r;
+        this.data[i + 1] = g;
+        this.data[i + 2] = b;
+        this.data[i + 3] = alpha;
+      }
+    }
   }
 
   rect(x: number, y: number, w: number, h: number, hex: string): void {
@@ -51,7 +65,6 @@ class Canvas {
   }
 
   line(x0: number, y0: number, x1: number, y1: number, hex: string): void {
-    // Bresenham
     const dx = Math.abs(x1 - x0);
     const dy = Math.abs(y1 - y0);
     const sx = x0 < x1 ? 1 : -1;
@@ -75,20 +88,21 @@ class Canvas {
     }
   }
 
-  /** Replace a horizontal strip. Useful for sprite-row banding. */
   hline(x: number, y: number, w: number, hex: string): void {
     this.rect(x, y, w, 1, hex);
   }
 
-  /** Blit another canvas at (x,y). Source alpha overrides destination. */
+  /** Blit another canvas at logical (x,y). Source alpha overrides destination. */
   blit(src: Canvas, x: number, y: number): void {
-    for (let sy = 0; sy < src.h; sy++) {
-      for (let sx = 0; sx < src.w; sx++) {
-        const si = (sy * src.w + sx) * 4;
+    for (let sy = 0; sy < src.ph; sy++) {
+      for (let sx = 0; sx < src.pw; sx++) {
+        const si = (sy * src.pw + sx) * 4;
         const a = src.data[si + 3];
         if (a === 0) continue;
-        const di = ((y + sy) * this.w + (x + sx)) * 4;
-        if (di < 0 || di >= this.data.length) continue;
+        const dx = x * SCALE + sx;
+        const dy = y * SCALE + sy;
+        if (dx < 0 || dy < 0 || dx >= this.pw || dy >= this.ph) continue;
+        const di = (dy * this.pw + dx) * 4;
         this.data[di] = src.data[si];
         this.data[di + 1] = src.data[si + 1];
         this.data[di + 2] = src.data[si + 2];
@@ -97,13 +111,13 @@ class Canvas {
     }
   }
 
-  /** Horizontally mirror another canvas and blit. */
+  /** Horizontally mirror another canvas and blit at logical (x,y). */
   blitMirrored(src: Canvas, x: number, y: number): void {
     const mirrored = new Canvas(src.w, src.h);
-    for (let sy = 0; sy < src.h; sy++) {
-      for (let sx = 0; sx < src.w; sx++) {
-        const si = (sy * src.w + sx) * 4;
-        const di = (sy * mirrored.w + (src.w - 1 - sx)) * 4;
+    for (let sy = 0; sy < src.ph; sy++) {
+      for (let sx = 0; sx < src.pw; sx++) {
+        const si = (sy * src.pw + sx) * 4;
+        const di = (sy * mirrored.pw + (src.pw - 1 - sx)) * 4;
         mirrored.data[di] = src.data[si];
         mirrored.data[di + 1] = src.data[si + 1];
         mirrored.data[di + 2] = src.data[si + 2];
@@ -114,7 +128,7 @@ class Canvas {
   }
 
   savePng(filePath: string): void {
-    const png = new PNG({ width: this.w, height: this.h });
+    const png = new PNG({ width: this.pw, height: this.ph });
     png.data = Buffer.from(this.data);
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, PNG.sync.write(png));
