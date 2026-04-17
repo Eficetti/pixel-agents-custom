@@ -12,8 +12,8 @@
       "type": "asset",
       "id": "LANTERN_OFF",
       "file": "LANTERN_OFF.png",
-      "width": 16,
-      "height": 32,
+      "width": 64,
+      "height": 128,
       "footprintW": 1,
       "footprintH": 2,
       "state": "off"
@@ -22,8 +22,8 @@
       "type": "asset",
       "id": "LANTERN_ON",
       "file": "LANTERN_ON.png",
-      "width": 16,
-      "height": 32,
+      "width": 64,
+      "height": 128,
       "footprintW": 1,
       "footprintH": 2,
       "state": "on"

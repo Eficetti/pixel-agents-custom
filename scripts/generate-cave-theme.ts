@@ -1397,11 +1397,15 @@ function writeFurnitureManifest(
     manifest.type = 'group';
     manifest.groupType = 'rotation';
     manifest.rotationScheme = '2-way';
-    manifest.members = def.members;
+    manifest.members = def.members.map((m) => ({
+      ...m,
+      width: m.width * SCALE,
+      height: m.height * SCALE,
+    }));
   } else {
     manifest.type = 'asset';
-    manifest.width = def.width;
-    manifest.height = def.height;
+    manifest.width = def.width * SCALE;
+    manifest.height = def.height * SCALE;
     manifest.footprintW = def.footprintW;
     manifest.footprintH = def.footprintH;
     if (def.isDesk) manifest.isDesk = true;
@@ -1425,6 +1429,8 @@ function writeStatefulFurnitureManifest(
     isDesk?: boolean;
   },
 ): void {
+  const w = opts.width * SCALE;
+  const h = opts.height * SCALE;
   const manifest = {
     id,
     name,
@@ -1439,8 +1445,8 @@ function writeStatefulFurnitureManifest(
         type: 'asset',
         id: `${id}_OFF`,
         file: `${id}_OFF.png`,
-        width: opts.width,
-        height: opts.height,
+        width: w,
+        height: h,
         footprintW: opts.footprintW,
         footprintH: opts.footprintH,
         state: 'off',
@@ -1450,8 +1456,8 @@ function writeStatefulFurnitureManifest(
         type: 'asset',
         id: `${id}_ON`,
         file: `${id}_ON.png`,
-        width: opts.width,
-        height: opts.height,
+        width: w,
+        height: h,
         footprintW: opts.footprintW,
         footprintH: opts.footprintH,
         state: 'on',

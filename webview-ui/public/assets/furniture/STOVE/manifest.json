@@ -12,8 +12,8 @@
       "type": "asset",
       "id": "STOVE_OFF",
       "file": "STOVE_OFF.png",
-      "width": 32,
-      "height": 32,
+      "width": 128,
+      "height": 128,
       "footprintW": 2,
       "footprintH": 2,
       "state": "off"
@@ -22,8 +22,8 @@
       "type": "asset",
       "id": "STOVE_ON",
       "file": "STOVE_ON.png",
-      "width": 32,
-      "height": 32,
+      "width": 128,
+      "height": 128,
       "footprintW": 2,
       "footprintH": 2,
       "state": "on"

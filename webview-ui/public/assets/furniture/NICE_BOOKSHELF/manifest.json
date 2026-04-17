@@ -6,8 +6,8 @@
   "canPlaceOnSurfaces": false,
   "backgroundTiles": 2,
   "type": "asset",
-  "width": 32,
-  "height": 48,
+  "width": 128,
+  "height": 192,
   "footprintW": 2,
   "footprintH": 3
 }
