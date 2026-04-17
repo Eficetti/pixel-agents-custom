@@ -77,6 +77,8 @@ export const WALL_COLOR = '#2A1F0F';
 // ── Camera ───────────────────────────────────────────────────
 export const CAMERA_FOLLOW_LERP = 0.1;
 export const CAMERA_FOLLOW_SNAP_THRESHOLD = 0.5;
+/** CSS-px movement before a left-mouse press is promoted from click to drag-to-pan. */
+export const LEFT_DRAG_PAN_THRESHOLD_PX = 4;
 
 // ── Zoom ─────────────────────────────────────────────────────
 export const ZOOM_MIN = 1;

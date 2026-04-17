@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import {
   CAMERA_FOLLOW_LERP,
   CAMERA_FOLLOW_SNAP_THRESHOLD,
+  LEFT_DRAG_PAN_THRESHOLD_PX,
   PAN_MARGIN_FRACTION,
   ZOOM_MAX,
   ZOOM_MIN,
@@ -63,6 +64,11 @@ export function OfficeCanvas({
   // Middle-mouse pan state (imperative, no re-renders)
   const isPanningRef = useRef(false);
   const panStartRef = useRef({ mouseX: 0, mouseY: 0, panX: 0, panY: 0 });
+  /** Left-click drag-to-pan: tracks potential pan start + whether drag exceeded threshold. */
+  const leftDragRef = useRef<{ pending: boolean; dragged: boolean }>({
+    pending: false,
+    dragged: false,
+  });
   // Delete/rotate button bounds (updated each frame by renderer)
   const deleteButtonBoundsRef = useRef<DeleteButtonBounds | null>(null);
   const rotateButtonBoundsRef = useRef<RotateButtonBounds | null>(null);
@@ -346,7 +352,19 @@ export function OfficeCanvas({
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      // Handle middle-mouse panning
+      // Promote a pending left-click into an active pan once movement exceeds threshold.
+      if (leftDragRef.current.pending && !isPanningRef.current) {
+        const mdx = e.clientX - panStartRef.current.mouseX;
+        const mdy = e.clientY - panStartRef.current.mouseY;
+        if (mdx * mdx + mdy * mdy > LEFT_DRAG_PAN_THRESHOLD_PX * LEFT_DRAG_PAN_THRESHOLD_PX) {
+          leftDragRef.current.dragged = true;
+          isPanningRef.current = true;
+          officeState.cameraFollowId = null;
+          const canvas = canvasRef.current;
+          if (canvas) canvas.style.cursor = 'grabbing';
+        }
+      }
+      // Handle middle-mouse panning (or promoted left-drag)
       if (isPanningRef.current) {
         const dpr = window.devicePixelRatio || 1;
         const dx = (e.clientX - panStartRef.current.mouseX) * dpr;
@@ -534,7 +552,21 @@ export function OfficeCanvas({
         return;
       }
 
-      if (!isEditMode) return;
+      if (!isEditMode) {
+        // Play mode: left-mouse starts a potential pan. Promoted to real pan on
+        // movement > threshold in handleMouseMove. If no drag, the click fires
+        // normally (character selection / seat reassignment via handleClick).
+        if (e.button === 0) {
+          leftDragRef.current = { pending: true, dragged: false };
+          panStartRef.current = {
+            mouseX: e.clientX,
+            mouseY: e.clientY,
+            panX: panRef.current.x,
+            panY: panRef.current.y,
+          };
+        }
+        return;
+      }
 
       // Check rotate/delete button hit first
       const pos = screenToWorld(e.clientX, e.clientY);
@@ -622,6 +654,19 @@ export function OfficeCanvas({
         isEraseDraggingRef.current = false;
         return;
       }
+      // Play-mode left-release: end a promoted pan, or let the click fire via handleClick.
+      if (!isEditMode && e.button === 0 && leftDragRef.current.pending) {
+        if (leftDragRef.current.dragged) {
+          isPanningRef.current = false;
+          const canvas = canvasRef.current;
+          if (canvas) canvas.style.cursor = 'default';
+          // leave dragged=true so handleClick suppresses this click
+          leftDragRef.current.pending = false;
+          return;
+        }
+        leftDragRef.current = { pending: false, dragged: false };
+        // fall through — handleClick will fire normally
+      }
 
       // Handle drag-to-move completion
       if (editorState.dragUid) {
@@ -669,6 +714,11 @@ export function OfficeCanvas({
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       if (isEditMode) return; // handled by mouseDown/mouseUp
+      // Suppress the click that ended a drag-to-pan gesture.
+      if (leftDragRef.current.dragged) {
+        leftDragRef.current.dragged = false;
+        return;
+      }
       const pos = screenToWorld(e.clientX, e.clientY);
       if (!pos) return;
 
@@ -733,6 +783,7 @@ export function OfficeCanvas({
 
   const handleMouseLeave = useCallback(() => {
     isPanningRef.current = false;
+    leftDragRef.current = { pending: false, dragged: false };
     isEraseDraggingRef.current = false;
     editorState.isDragging = false;
     editorState.wallDragAdding = null;
