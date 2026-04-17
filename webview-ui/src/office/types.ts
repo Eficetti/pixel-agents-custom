@@ -185,7 +185,7 @@ export interface Character {
   matrixEffect: 'spawn' | 'despawn' | null;
   /** Timer counting up from 0 to MATRIX_EFFECT_DURATION */
   matrixEffectTimer: number;
-  /** Per-column random seeds (16 values) for staggered rain timing */
+  /** Per-column random seeds (MATRIX_SPRITE_COLS values) for staggered rain timing */
   matrixEffectSeeds: number[];
   /** Workspace folder name (only set for multi-root workspaces) */
   folderName?: string;

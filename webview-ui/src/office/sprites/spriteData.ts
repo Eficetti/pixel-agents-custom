@@ -1,5 +1,5 @@
 import type { ColorValue } from '../../components/ui/types.js';
-import { PALETTE_COUNT } from '../../constants.js';
+import { PALETTE_COUNT, TILE_SIZE } from '../../constants.js';
 import { adjustSprite } from '../colorize.js';
 import type { Direction, SpriteData } from '../types.js';
 import { Direction as Dir } from '../types.js';
@@ -147,8 +147,8 @@ export function getCharacterSprites(paletteIndex: number, hueShift = 0): Charact
       },
     };
   } else {
-    // Fallback: return transparent placeholder sprites (16×32)
-    const e = emptySprite(16, 32);
+    // Fallback: return transparent placeholder sprites (TILE_SIZE × TILE_SIZE*2)
+    const e = emptySprite(TILE_SIZE, TILE_SIZE * 2);
     const walkSet: [SpriteData, SpriteData, SpriteData, SpriteData] = [e, e, e, e];
     const pairSet: [SpriteData, SpriteData] = [e, e];
     sprites = {

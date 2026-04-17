@@ -11,7 +11,7 @@ import { CANVAS_ERROR_TILE_COLOR, FALLBACK_FLOOR_COLOR, TILE_SIZE } from '../con
 import { clearColorizeCache, getColorizedSprite } from './colorize.js';
 import type { SpriteData } from './types.js';
 
-/** Default solid gray 16×16 tile used when floor tile PNGs are not loaded */
+/** Default solid gray TILE_SIZE×TILE_SIZE tile used when floor tile PNGs are not loaded */
 const DEFAULT_FLOOR_SPRITE: SpriteData = Array.from(
   { length: TILE_SIZE },
   () => Array(TILE_SIZE).fill(FALLBACK_FLOOR_COLOR) as string[],
@@ -65,9 +65,9 @@ export function getColorizedFloorSprite(patternIndex: number, color: ColorValue)
 
   const base = getFloorSprite(patternIndex);
   if (!base) {
-    // Return a 16x16 magenta error tile
-    const err: SpriteData = Array.from({ length: 16 }, () =>
-      Array(16).fill(CANVAS_ERROR_TILE_COLOR),
+    // Return a TILE_SIZE×TILE_SIZE magenta error tile
+    const err: SpriteData = Array.from({ length: TILE_SIZE }, () =>
+      Array(TILE_SIZE).fill(CANVAS_ERROR_TILE_COLOR),
     );
     return err;
   }
