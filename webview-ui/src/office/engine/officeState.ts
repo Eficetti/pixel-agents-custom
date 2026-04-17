@@ -2,6 +2,9 @@ import { BOSS_PALETTE_INDEX } from '../../../../shared/assets/constants.ts';
 import {
   AUTO_ON_FACING_DEPTH,
   AUTO_ON_SIDE_DEPTH,
+  CAPATAZ_BUBBLE_DURATION_SEC,
+  CAPATAZ_BUBBLE_MAX_CHARS,
+  CAPATAZ_ID,
   CHARACTER_HIT_HALF_WIDTH,
   CHARACTER_HIT_HEIGHT,
   CHARACTER_SITTING_OFFSET_PX,
@@ -745,6 +748,68 @@ export class OfficeState {
     ch.outputTokens = outputTokens;
   }
 
+  /**
+   * Spawn (or return) the persistent capataz character.
+   * Idempotent — safe to call after every layout rebuild.
+   * Returns the character, or null if no suitable chair is found.
+   */
+  ensureCapataz(): Character | null {
+    // Already spawned — nothing to do.
+    if (this.characters.has(CAPATAZ_ID)) {
+      return this.characters.get(CAPATAZ_ID)!;
+    }
+
+    // Find the first NICE_CHAIR in the layout; fall back to any chair.
+    let chairItem: PlacedFurniture | null = null;
+    for (const item of this.layout.furniture) {
+      const entry = getCatalogEntry(item.type);
+      if (!entry || entry.category !== 'chairs') continue;
+      if (item.type === 'NICE_CHAIR') {
+        chairItem = item;
+        break;
+      }
+      if (!chairItem) chairItem = item; // first chair fallback
+    }
+    if (!chairItem) {
+      console.warn('[pixel-agents] ensureCapataz: no chair found in layout — capataz skipped');
+      return null;
+    }
+
+    // The seat uid matches the chair uid (first seat tile).
+    const seatId = chairItem.uid;
+    const seat = this.seats.get(seatId);
+    if (!seat) {
+      console.warn('[pixel-agents] ensureCapataz: no seat found for chair uid', seatId);
+      return null;
+    }
+
+    const ch = createCharacter(CAPATAZ_ID, BOSS_PALETTE_INDEX, seatId, seat, 0);
+    ch.isCapataz = true;
+    ch.isSystemChar = true;
+    // Start already sitting — no spawn matrix effect.
+    ch.matrixEffect = null;
+    seat.assigned = true;
+
+    this.characters.set(CAPATAZ_ID, ch);
+    return ch;
+  }
+
+  /**
+   * Update the capataz speech bubble text.
+   * Strips the "[Pixel Agents] " prefix and truncates to CAPATAZ_BUBBLE_MAX_CHARS.
+   */
+  setCapatazLog(text: string): void {
+    const ch = this.characters.get(CAPATAZ_ID);
+    if (!ch) return;
+    // Strip common prefix for brevity in the bubble.
+    let display = text.startsWith('[Pixel Agents] ') ? text.slice('[Pixel Agents] '.length) : text;
+    if (display.length > CAPATAZ_BUBBLE_MAX_CHARS) {
+      display = display.slice(0, CAPATAZ_BUBBLE_MAX_CHARS - 1) + '…';
+    }
+    ch.capatazBubbleText = display;
+    ch.capatazBubbleFadeTimer = CAPATAZ_BUBBLE_DURATION_SEC;
+  }
+
   update(dt: number): void {
     // Furniture animation cycling
     const prevFrame = Math.floor(this.furnitureAnimTimer / FURNITURE_ANIM_INTERVAL_SEC);
@@ -784,6 +849,15 @@ export class OfficeState {
         if (ch.bubbleTimer <= 0) {
           ch.bubbleType = null;
           ch.bubbleTimer = 0;
+        }
+      }
+
+      // Tick capataz text bubble fade timer
+      if (ch.capatazBubbleFadeTimer !== undefined) {
+        ch.capatazBubbleFadeTimer -= dt;
+        if (ch.capatazBubbleFadeTimer <= 0) {
+          ch.capatazBubbleText = undefined;
+          ch.capatazBubbleFadeTimer = undefined;
         }
       }
     }

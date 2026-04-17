@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 import { adoptExternalSessionFromHook } from '../../core/src/fileWatcher.js';
 import type { DialogProvider, WorkspaceProvider } from '../../core/src/interfaces.js';
+import { installCapatazLogger } from '../../core/src/logger.js';
 import { Orchestrator } from '../../core/src/orchestrator.js';
 import { HookEventHandler } from '../../server/src/hookEventHandler.js';
 import type { HookEvent } from '../../server/src/hookEventHandler.js';
@@ -193,6 +194,9 @@ async function main(): Promise<void> {
     command: 'claude',
     buildArgs: (sessionId) => ['--session-id', sessionId],
   });
+
+  // Tee all [Pixel Agents] console.log lines to the capataz character's speech bubble.
+  installCapatazLogger(() => orchestrator.getMessageSender());
 
   // Hook pipeline: PixelAgentsServer receives hook POSTs, HookEventHandler routes
   // them to agents. Both are instantiated even when --no-hooks is set, because

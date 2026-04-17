@@ -137,6 +137,22 @@ export const CHARACTER_HIT_HALF_WIDTH = 32;
 export const CHARACTER_HIT_HEIGHT = 96;
 export const TOOL_OVERLAY_VERTICAL_OFFSET = 128;
 
+// ── Capataz (persistent foreman) ────────────────────────────
+/** Fixed character ID for the persistent capataz. Chosen far from sub-agent IDs (which count down from -1). */
+export const CAPATAZ_ID = -9999;
+/** Seconds the capataz speech bubble stays visible after the last log. */
+export const CAPATAZ_BUBBLE_DURATION_SEC = 3;
+/** Max characters in the capataz speech bubble (trimmed with … if exceeded). */
+export const CAPATAZ_BUBBLE_MAX_CHARS = 80;
+/** Seconds of the fade-out period at the end of the bubble lifetime. */
+export const CAPATAZ_BUBBLE_FADE_SEC = 0.5;
+/** Background fill for the capataz text bubble (canvas rgba). */
+export const CAPATAZ_BUBBLE_BG = 'rgba(30, 30, 46, 0.95)';
+/** Border stroke for the capataz text bubble (canvas rgba). */
+export const CAPATAZ_BUBBLE_BORDER = 'rgba(255, 255, 255, 0.45)';
+/** Text color for the capataz text bubble. */
+export const CAPATAZ_BUBBLE_TEXT_COLOR = '#e6e6e6';
+
 // ── Agent Teams ─────────────────────────────────────────────
 export const MAX_CONTEXT_TOKENS = 200_000;
 export const TOKEN_WARN_THRESHOLD = 0.6;

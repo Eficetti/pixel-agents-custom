@@ -73,7 +73,7 @@ interface ExtensionMessageState {
 function saveAgentSeats(os: OfficeState): void {
   const seats: Record<number, { palette: number; hueShift: number; seatId: string | null }> = {};
   for (const ch of os.characters.values()) {
-    if (ch.isSubagent) continue;
+    if (ch.isSubagent || ch.isSystemChar) continue;
     seats[ch.id] = { palette: ch.palette, hueShift: ch.hueShift, seatId: ch.seatId };
   }
   vscode.postMessage({ type: 'saveAgentSeats', seats });
@@ -136,6 +136,7 @@ export function useExtensionMessages(
         const layout = rawLayout && rawLayout.version === 1 ? migrateLayoutColors(rawLayout) : null;
         if (layout) {
           os.rebuildFromLayout(layout);
+          os.ensureCapataz();
           onLayoutLoaded?.(layout);
         } else {
           // Default layout — snapshot whatever OfficeState built
@@ -524,6 +525,8 @@ export function useExtensionMessages(
         if (!msg.installed && msg.error) {
           console.warn('[pixel-agents] Hook install failed:', msg.error);
         }
+      } else if (msg.type === 'capatazLog') {
+        os.setCapatazLog(String(msg.text ?? ''));
       }
     };
     const unsubscribe = transport.onMessage(handler);

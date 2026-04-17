@@ -9,6 +9,10 @@ import {
   BUTTON_LINE_WIDTH_ZOOM_FACTOR,
   BUTTON_MIN_RADIUS,
   BUTTON_RADIUS_ZOOM_FACTOR,
+  CAPATAZ_BUBBLE_BG,
+  CAPATAZ_BUBBLE_BORDER,
+  CAPATAZ_BUBBLE_FADE_SEC,
+  CAPATAZ_BUBBLE_TEXT_COLOR,
   CHARACTER_SITTING_OFFSET_PX,
   CHARACTER_Z_SORT_OFFSET,
   DELETE_BUTTON_BG,
@@ -494,32 +498,95 @@ function renderBubbles(
   zoom: number,
 ): void {
   for (const ch of characters) {
-    if (!ch.bubbleType) continue;
+    if (!ch.bubbleType && !ch.capatazBubbleText) continue;
 
-    const sprite =
-      ch.bubbleType === 'permission' ? BUBBLE_PERMISSION_SPRITE : BUBBLE_WAITING_SPRITE;
+    if (ch.bubbleType) {
+      const sprite =
+        ch.bubbleType === 'permission' ? BUBBLE_PERMISSION_SPRITE : BUBBLE_WAITING_SPRITE;
 
-    // Compute opacity: permission = full, waiting = fade in last 0.5s
-    let alpha = 1.0;
-    if (ch.bubbleType === 'waiting' && ch.bubbleTimer < BUBBLE_FADE_DURATION_SEC) {
-      alpha = ch.bubbleTimer / BUBBLE_FADE_DURATION_SEC;
+      // Compute opacity: permission = full, waiting = fade in last 0.5s
+      let alpha = 1.0;
+      if (ch.bubbleType === 'waiting' && ch.bubbleTimer < BUBBLE_FADE_DURATION_SEC) {
+        alpha = ch.bubbleTimer / BUBBLE_FADE_DURATION_SEC;
+      }
+
+      const cached = getCachedSprite(sprite, zoom);
+      // Position: centered above the character's head
+      // Character is anchored bottom-center at (ch.x, ch.y); sprite visible area = CHARACTER_HIT_HALF_WIDTH*2 × CHARACTER_HIT_HEIGHT
+      // Place bubble above head with a small gap; follow sitting offset
+      const sittingOff = ch.state === CharacterState.TYPE ? BUBBLE_SITTING_OFFSET_PX : 0;
+      const bubbleX = Math.round(offsetX + ch.x * zoom - cached.width / 2);
+      const bubbleY = Math.round(
+        offsetY + (ch.y + sittingOff - BUBBLE_VERTICAL_OFFSET_PX) * zoom - cached.height - 1 * zoom,
+      );
+
+      ctx.save();
+      if (alpha < 1.0) ctx.globalAlpha = alpha;
+      ctx.drawImage(cached, bubbleX, bubbleY);
+      ctx.restore();
     }
 
-    const cached = getCachedSprite(sprite, zoom);
-    // Position: centered above the character's head
-    // Character is anchored bottom-center at (ch.x, ch.y); sprite visible area = CHARACTER_HIT_HALF_WIDTH*2 × CHARACTER_HIT_HEIGHT
-    // Place bubble above head with a small gap; follow sitting offset
-    const sittingOff = ch.state === CharacterState.TYPE ? BUBBLE_SITTING_OFFSET_PX : 0;
-    const bubbleX = Math.round(offsetX + ch.x * zoom - cached.width / 2);
-    const bubbleY = Math.round(
-      offsetY + (ch.y + sittingOff - BUBBLE_VERTICAL_OFFSET_PX) * zoom - cached.height - 1 * zoom,
-    );
-
-    ctx.save();
-    if (alpha < 1.0) ctx.globalAlpha = alpha;
-    ctx.drawImage(cached, bubbleX, bubbleY);
-    ctx.restore();
+    if (ch.capatazBubbleText) {
+      renderCapatazBubble(ctx, ch, offsetX, offsetY, zoom);
+    }
   }
+}
+
+/** Render a text speech bubble above the capataz character. */
+function renderCapatazBubble(
+  ctx: CanvasRenderingContext2D,
+  ch: Character,
+  offsetX: number,
+  offsetY: number,
+  zoom: number,
+): void {
+  const text = ch.capatazBubbleText;
+  if (!text) return;
+
+  // Fade out during the last CAPATAZ_BUBBLE_FADE_SEC seconds.
+  const timer = ch.capatazBubbleFadeTimer ?? 0;
+  const alpha = Math.min(1, timer / CAPATAZ_BUBBLE_FADE_SEC);
+
+  const fontSize = Math.max(10, Math.round(11 * Math.min(zoom, 3)));
+  ctx.save();
+  ctx.font = `${fontSize}px "FS Pixel Sans", monospace`;
+  const textW = ctx.measureText(text).width;
+  const padX = 8;
+  const padY = 5;
+  const boxW = Math.min(textW + padX * 2, 300 * Math.min(zoom, 3));
+  const boxH = fontSize + padY * 2;
+
+  // Position: centered horizontally on character, above head
+  const sittingOff = ch.state === CharacterState.TYPE ? BUBBLE_SITTING_OFFSET_PX : 0;
+  const anchorX = Math.round(offsetX + ch.x * zoom);
+  const anchorY = Math.round(
+    offsetY + (ch.y + sittingOff - BUBBLE_VERTICAL_OFFSET_PX) * zoom - 2 * zoom,
+  );
+
+  const boxX = Math.round(anchorX - boxW / 2);
+  const boxY = anchorY - boxH;
+
+  ctx.globalAlpha = alpha * 0.92;
+
+  // Background
+  ctx.fillStyle = CAPATAZ_BUBBLE_BG;
+  ctx.fillRect(boxX, boxY, boxW, boxH);
+
+  // Border (2px solid)
+  ctx.strokeStyle = CAPATAZ_BUBBLE_BORDER;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(boxX + 1, boxY + 1, boxW - 2, boxH - 2);
+
+  // Text (clip to box)
+  ctx.fillStyle = CAPATAZ_BUBBLE_TEXT_COLOR;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.beginPath();
+  ctx.rect(boxX + padX, boxY, boxW - padX * 2, boxH);
+  ctx.clip();
+  ctx.fillText(text, boxX + padX, boxY + boxH / 2);
+
+  ctx.restore();
 }
 
 export interface ButtonBounds {

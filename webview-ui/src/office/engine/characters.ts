@@ -97,6 +97,16 @@ export function updateCharacter(
   tileMap: TileTypeVal[][],
   blockedTiles: Set<string>,
 ): void {
+  // System characters (capataz) stay put — skip FSM entirely.
+  if (ch.isSystemChar) {
+    ch.frameTimer += dt;
+    if (ch.frameTimer >= TYPE_FRAME_DURATION_SEC) {
+      ch.frameTimer -= TYPE_FRAME_DURATION_SEC;
+      ch.frame = (ch.frame + 1) % 2;
+    }
+    return;
+  }
+
   ch.frameTimer += dt;
 
   switch (ch.state) {

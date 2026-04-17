@@ -205,4 +205,10 @@ export interface Character {
   inputTokens: number;
   /** Cumulative output tokens consumed */
   outputTokens: number;
+  /** System-created character that never despawns and doesn't count as an agent. */
+  isSystemChar?: boolean;
+  /** Text bubble above the capataz showing the latest [Pixel Agents] log message. */
+  capatazBubbleText?: string;
+  /** Seconds remaining before capatazBubbleText fades. Resets on each new log. */
+  capatazBubbleFadeTimer?: number;
 }
